@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -11,6 +12,7 @@ const stats = [
     subtitle: "Active patient access",
     icon: Users,
     variant: "primary" as const,
+    href: "/doctor/patients",
   },
   {
     title: "Pending Requests",
@@ -18,6 +20,7 @@ const stats = [
     subtitle: "Awaiting patient approval",
     icon: Clock,
     variant: "accent" as const,
+    href: "/doctor/request-access",
   },
   {
     title: "Records Reviewed",
@@ -25,6 +28,7 @@ const stats = [
     subtitle: "This month",
     icon: FileText,
     variant: "default" as const,
+    href: "/doctor/records",
   },
 ];
 
@@ -111,12 +115,12 @@ export default function DoctorDashboard() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <h3 className="section-title">Pending Access Requests</h3>
-            <a
-              href="/doctor/request-access"
+            <Link
+              to="/doctor/request-access"
               className="text-sm font-medium text-primary hover:underline"
             >
               View All
-            </a>
+            </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
@@ -124,9 +128,10 @@ export default function DoctorDashboard() {
               { name: "Michael Brown", status: "Pending", days: "3 days" },
               { name: "Sarah Miller", status: "Pending", days: "5 days" },
             ].map((request, index) => (
-              <div
+              <Link
                 key={request.name}
-                className="rounded-lg border border-border bg-muted/30 p-4 animate-fade-in"
+                to="/doctor/request-access"
+                className="rounded-lg border border-border bg-muted/30 p-4 animate-fade-in transition-all hover:border-primary/30 hover:shadow-md"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-center gap-3">
@@ -148,7 +153,7 @@ export default function DoctorDashboard() {
                 <span className="mt-3 inline-block badge-status badge-pending">
                   {request.status}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

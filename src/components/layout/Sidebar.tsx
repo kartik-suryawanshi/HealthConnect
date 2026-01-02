@@ -40,15 +40,15 @@ export function Sidebar({ userRole }: SidebarProps) {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-sidebar-border bg-sidebar">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
+        <Link to="/" className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6 transition-colors hover:bg-muted/50">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Heart className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-base font-semibold text-foreground">HealthRecord</h1>
-            <p className="text-xs text-muted-foreground">Digital Health System</p>
+            <h1 className="text-base font-semibold text-foreground">Digital Health</h1>
+            <p className="text-xs text-muted-foreground">Records System</p>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FileText, Eye, Upload, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,19 +26,30 @@ const activityColors = {
 
 interface RecentActivityProps {
   activities: ActivityItem[];
+  viewAllHref?: string;
 }
 
-export function RecentActivity({ activities }: RecentActivityProps) {
+export function RecentActivity({ activities, viewAllHref }: RecentActivityProps) {
   return (
     <div className="stat-card">
-      <h3 className="section-title">Recent Activity</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="section-title mb-0">Recent Activity</h3>
+        {viewAllHref && (
+          <Link
+            to={viewAllHref}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            View All
+          </Link>
+        )}
+      </div>
       <div className="space-y-4">
         {activities.map((activity, index) => {
           const Icon = activityIcons[activity.type];
           return (
             <div
               key={activity.id}
-              className="flex items-start gap-4 animate-slide-in"
+              className="flex items-start gap-4 animate-slide-in rounded-lg p-2 -mx-2 transition-colors hover:bg-muted/50"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div

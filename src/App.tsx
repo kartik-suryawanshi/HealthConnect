@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Pages
 import Index from "./pages/Index";
@@ -24,33 +25,35 @@ import PatientRecordsView from "./pages/doctor/PatientRecordsView";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          
-          {/* Patient Routes */}
-          <Route path="/patient" element={<PatientDashboard />} />
-          <Route path="/patient/records" element={<HealthRecords />} />
-          <Route path="/patient/access-requests" element={<AccessRequests />} />
-          <Route path="/patient/shared-access" element={<SharedAccess />} />
-          <Route path="/patient/activity" element={<ActivityLogs />} />
-          
-          {/* Doctor Routes */}
-          <Route path="/doctor" element={<DoctorDashboard />} />
-          <Route path="/doctor/request-access" element={<RequestAccess />} />
-          <Route path="/doctor/patients" element={<AuthorizedPatients />} />
-          <Route path="/doctor/records" element={<PatientRecordsView />} />
-          
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            
+            {/* Patient Routes */}
+            <Route path="/patient" element={<PatientDashboard />} />
+            <Route path="/patient/records" element={<HealthRecords />} />
+            <Route path="/patient/access-requests" element={<AccessRequests />} />
+            <Route path="/patient/shared-access" element={<SharedAccess />} />
+            <Route path="/patient/activity" element={<ActivityLogs />} />
+            
+            {/* Doctor Routes */}
+            <Route path="/doctor" element={<DoctorDashboard />} />
+            <Route path="/doctor/request-access" element={<RequestAccess />} />
+            <Route path="/doctor/patients" element={<AuthorizedPatients />} />
+            <Route path="/doctor/records" element={<PatientRecordsView />} />
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

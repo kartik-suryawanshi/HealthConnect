@@ -11,6 +11,7 @@ const stats = [
     subtitle: "Health documents uploaded",
     icon: FileText,
     variant: "primary" as const,
+    href: "/patient/records",
   },
   {
     title: "Active Access",
@@ -18,6 +19,7 @@ const stats = [
     subtitle: "Doctors with permissions",
     icon: Users,
     variant: "accent" as const,
+    href: "/patient/shared-access",
   },
   {
     title: "Recent Uploads",
@@ -25,6 +27,7 @@ const stats = [
     subtitle: "In the last 30 days",
     icon: Upload,
     variant: "default" as const,
+    href: "/patient/records",
   },
   {
     title: "Pending Requests",
@@ -32,6 +35,7 @@ const stats = [
     subtitle: "Awaiting your approval",
     icon: Shield,
     variant: "primary" as const,
+    href: "/patient/access-requests",
   },
 ];
 
@@ -107,7 +111,7 @@ export default function PatientDashboard() {
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <RecentActivity activities={recentActivities} />
+            <RecentActivity activities={recentActivities} viewAllHref="/patient/activity" />
           </div>
           <div>
             <QuickActions actions={quickActions} />

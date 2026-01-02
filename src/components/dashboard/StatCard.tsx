@@ -1,4 +1,5 @@
 import { LucideIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
@@ -11,6 +12,7 @@ interface StatCardProps {
     isPositive: boolean;
   };
   variant?: "default" | "primary" | "accent";
+  href?: string;
 }
 
 export function StatCard({
@@ -20,9 +22,10 @@ export function StatCard({
   icon: Icon,
   trend,
   variant = "default",
+  href,
 }: StatCardProps) {
-  return (
-    <div className="stat-card animate-fade-in">
+  const content = (
+    <>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -62,6 +65,19 @@ export function StatCard({
           />
         </div>
       </div>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link
+        to={href}
+        className="stat-card animate-fade-in transition-all hover:border-primary/30 hover:shadow-md block"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="stat-card animate-fade-in">{content}</div>;
 }

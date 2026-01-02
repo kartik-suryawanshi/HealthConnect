@@ -6,58 +6,58 @@
 
 @layer base {
   :root {
-    /* Healthcare Design System */
-    --background: 210 33% 98%;
-    --foreground: 220 20% 20%;
+    /* Healthcare Design System - Emerald Green Theme */
+    --background: 150 20% 98%;
+    --foreground: 160 20% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 20%;
+    --card-foreground: 160 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 20%;
+    --popover-foreground: 160 20% 15%;
 
-    /* Soft Teal - Primary Medical Color */
-    --primary: 177 51% 45%;
+    /* Emerald Green - Primary Medical Color (matches favicon #10b981) */
+    --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Light teal tint */
-    --secondary: 177 40% 95%;
-    --secondary-foreground: 177 51% 35%;
+    /* Secondary - Light emerald tint */
+    --secondary: 160 50% 95%;
+    --secondary-foreground: 160 84% 30%;
 
-    /* Muted grays */
-    --muted: 210 20% 96%;
-    --muted-foreground: 220 10% 50%;
+    /* Muted grays with green undertone */
+    --muted: 150 15% 96%;
+    --muted-foreground: 160 10% 45%;
 
-    /* Accent - Muted Blue */
-    --accent: 214 84% 56%;
+    /* Accent - Darker emerald (#059669) */
+    --accent: 160 93% 31%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     /* Success green for approvals */
-    --success: 160 60% 45%;
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
 
     /* Warning amber */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 177 51% 45%;
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 160 84% 39%;
 
     --radius: 0.625rem;
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 30%;
-    --sidebar-primary: 177 51% 45%;
+    --sidebar-foreground: 160 20% 25%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 177 40% 95%;
-    --sidebar-accent-foreground: 177 51% 35%;
-    --sidebar-border: 210 20% 92%;
-    --sidebar-ring: 177 51% 45%;
+    --sidebar-accent: 160 50% 95%;
+    --sidebar-accent-foreground: 160 84% 30%;
+    --sidebar-border: 150 15% 90%;
+    --sidebar-ring: 160 84% 39%;
 
     /* Custom tokens */
     --header-height: 4rem;
@@ -66,48 +66,48 @@
   }
 
   .dark {
-    --background: 220 20% 10%;
-    --foreground: 210 20% 95%;
+    --background: 160 20% 8%;
+    --foreground: 150 15% 95%;
 
-    --card: 220 20% 14%;
-    --card-foreground: 210 20% 95%;
+    --card: 160 18% 12%;
+    --card-foreground: 150 15% 95%;
 
-    --popover: 220 20% 14%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 160 18% 12%;
+    --popover-foreground: 150 15% 95%;
 
-    --primary: 177 51% 50%;
+    --primary: 160 84% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 177 30% 20%;
-    --secondary-foreground: 177 40% 80%;
+    --secondary: 160 30% 18%;
+    --secondary-foreground: 160 50% 75%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 160 15% 18%;
+    --muted-foreground: 150 12% 60%;
 
-    --accent: 214 84% 60%;
+    --accent: 160 80% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 60% 40%;
+    --success: 160 84% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 45%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 15% 25%;
-    --input: 220 15% 25%;
-    --ring: 177 51% 50%;
+    --border: 160 15% 22%;
+    --input: 160 15% 22%;
+    --ring: 160 84% 45%;
 
-    --sidebar-background: 220 20% 12%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 177 51% 50%;
+    --sidebar-background: 160 18% 10%;
+    --sidebar-foreground: 150 15% 85%;
+    --sidebar-primary: 160 84% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 177 30% 20%;
-    --sidebar-accent-foreground: 177 40% 80%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 177 51% 50%;
+    --sidebar-accent: 160 30% 18%;
+    --sidebar-accent-foreground: 160 50% 75%;
+    --sidebar-border: 160 15% 18%;
+    --sidebar-ring: 160 84% 45%;
   }
 }
 
@@ -185,4 +185,88 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Custom Animations */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(-3deg); }
+}
+
+@keyframes float-fast {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+
+@keyframes draw-line {
+  from { stroke-dasharray: 0 1000; }
+  to { stroke-dasharray: 1000 1000; }
+}
+
+@keyframes progress-bar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-slow-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 5s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 4s ease-in-out infinite;
+}
+
+.animate-draw-line {
+  animation: draw-line 1.5s ease-out forwards;
+  animation-delay: 0.5s;
+  stroke-dasharray: 0 1000;
+}
+
+.animate-progress-bar {
+  animation: progress-bar 4s linear forwards;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-spin-slow-reverse {
+  animation: spin-slow-reverse 15s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.5s ease-out forwards;
 }
