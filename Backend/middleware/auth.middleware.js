@@ -98,3 +98,14 @@ export const checkOwnership = (model, paramName = 'id') => {
   };
 };
 
+// Check if record is locked
+export const checkImmutable = (req, res, next) => {
+  if (req.resource && req.resource.isLocked) {
+    return res.status(403).json({
+      success: false,
+      message: 'Record is immutable and locked. Modifications are not allowed.'
+    });
+  }
+  next();
+};
+

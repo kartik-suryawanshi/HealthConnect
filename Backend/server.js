@@ -4,7 +4,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import path from 'path';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import logger from './utils/logger.js';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import xss from 'xss-clean';
+import mongoSanitize from 'express-mongo-sanitize';
+// import { fileURLToPath } from 'url';
 
 // Import Routes
 import authRoutes from './routes/auth.routes.js';
@@ -14,6 +22,7 @@ import activityLogRoutes from './routes/activityLog.routes.js';
 import userRoutes from './routes/user.routes.js';
 import insuranceRoutes from './routes/insurance.routes.js';
 import healthMetricRoutes from './routes/healthMetric.routes.js';
+import { startCronJobs } from './utils/cronJobs.js';
 
 // Load environment variables
 dotenv.config();
@@ -23,7 +32,33 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || '',
+  integrations: [
+    nodeProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0, 
+  profilesSampleRate: 1.0,
+});
+
 // Middleware
+// Set security HTTP headers
+app.use(helmet());
+
+// Cross-site scripting (XSS) protection
+app.use(xss());
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again in 15 minutes'
+});
+app.use('/api', limiter);
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -50,7 +85,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -73,9 +108,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// The error handler must be configured to catch all exceptions via Sentry
+Sentry.setupExpressErrorHandler(app);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error(err.stack);
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error',
@@ -95,9 +133,9 @@ app.use((req, res) => {
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/healthconnect');
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    logger.info(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('MongoDB connection error:', error.message);
+    logger.error('MongoDB connection error:', error.message);
     process.exit(1);
   }
 };
@@ -106,9 +144,12 @@ const connectDB = async () => {
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
+  // Start automated jobs
+  startCronJobs();
+
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`Server running on port ${PORT}`);
+    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 });
 

@@ -1,5 +1,6 @@
 import User from '../models/User.model.js';
-import { generateToken } from '../utils/generateToken.js';
+import { generateAccessToken, generateRefreshTokenString } from '../utils/generateToken.js';
+import RefreshToken from '../models/RefreshToken.model.js';
 import { logActivity } from '../utils/activityLogger.js';
 
 // @desc    Register user
@@ -56,15 +57,26 @@ export const register = async (req, res) => {
       actor: user.name
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const token = generateAccessToken(user._id);
+    const refreshTokenString = generateRefreshTokenString();
+    
+    // Save refresh token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    await RefreshToken.create({
+      user: user._id,
+      token: refreshTokenString,
+      expiresAt
+    });
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
         user,
-        token
+        token,
+        refreshToken: refreshTokenString
       }
     });
   } catch (error) {
@@ -92,7 +104,7 @@ export const login = async (req, res) => {
     }
 
     // Check user and password
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password +loginAttempts +lockUntil');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -100,8 +112,26 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if account is locked
+    if (user.isLocked) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is temporarily locked due to multiple failed login attempts. Please try again later.'
+      });
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      // Increment login attempts
+      user.loginAttempts += 1;
+      // Lock account after 5 failed attempts
+      if (user.loginAttempts >= 5) {
+        const lockTime = new Date();
+        lockTime.setMinutes(lockTime.getMinutes() + 15); // lock for 15 mins
+        user.lockUntil = lockTime;
+      }
+      await user.save();
+
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -115,6 +145,9 @@ export const login = async (req, res) => {
       });
     }
 
+    // Reset login attempts on successful login
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
     // Update last login
     user.lastLogin = new Date();
     await user.save();
@@ -129,15 +162,26 @@ export const login = async (req, res) => {
       actor: user.name
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const token = generateAccessToken(user._id);
+    const refreshTokenString = generateRefreshTokenString();
+    
+    // Save refresh token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    await RefreshToken.create({
+      user: user._id,
+      token: refreshTokenString,
+      expiresAt
+    });
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         user,
-        token
+        token,
+        refreshToken: refreshTokenString
       }
     });
   } catch (error) {
@@ -201,6 +245,62 @@ export const updateProfile = async (req, res) => {
       success: false,
       message: error.message || 'Error updating profile'
     });
+  }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh-token
+// @access  Public
+export const refreshToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Please provide a refresh token' });
+    }
+
+    const savedToken = await RefreshToken.findOne({ token }).populate('user');
+    
+    if (!savedToken) {
+      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    }
+
+    if (savedToken.expiresAt < new Date()) {
+      await RefreshToken.findByIdAndDelete(savedToken._id);
+      return res.status(401).json({ success: false, message: 'Refresh token expired. Please login again.' });
+    }
+
+    const user = savedToken.user;
+    if (!user || !user.isActive || user.isLocked) {
+      return res.status(401).json({ success: false, message: 'User account is invalid or locked' });
+    }
+
+    const newAccessToken = generateAccessToken(user._id);
+    const newRefreshTokenString = generateRefreshTokenString();
+
+    // delete old token, save new
+    await RefreshToken.findByIdAndDelete(savedToken._id);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await RefreshToken.create({
+      user: user._id,
+      token: newRefreshTokenString,
+      expiresAt
+    });
+
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        token: newAccessToken,
+        refreshToken: newRefreshTokenString
+      }
+    });
+
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ success: false, message: 'Error refreshing token' });
   }
 };
 

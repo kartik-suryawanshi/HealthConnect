@@ -2,6 +2,7 @@ import AccessRequest from '../models/AccessRequest.model.js';
 import HealthRecord from '../models/HealthRecord.model.js';
 import User from '../models/User.model.js';
 import { logActivity } from '../utils/activityLogger.js';
+import { sendEmail } from '../utils/email.js';
 
 // @desc    Create access request (Doctor)
 // @route   POST /api/access-requests
@@ -87,6 +88,13 @@ export const createAccessRequest = async (req, res) => {
       description: `Requested access to ${patient.name}'s records`,
       actor: req.user.name,
       targetUser: patient._id
+    });
+
+    // Send email to patient
+    await sendEmail({
+      email: patient.email,
+      subject: 'New Access Request - HealthConnect',
+      message: `Dr. ${req.user.name} has requested access to your health records for the following reason: ${reason}. Please login to approve or reject this request.`
     });
 
     res.status(201).json({
@@ -260,6 +268,13 @@ export const approveAccessRequest = async (req, res) => {
       targetUser: request.doctor._id
     });
 
+    // Send email to doctor
+    await sendEmail({
+      email: request.doctor.email,
+      subject: 'Access Request Approved - HealthConnect',
+      message: `Patient ${req.user.name} has approved your access request to their health records.`
+    });
+
     res.json({
       success: true,
       message: 'Access request approved successfully',
@@ -328,6 +343,13 @@ export const rejectAccessRequest = async (req, res) => {
       description: `Rejected access request from ${request.doctor.name}`,
       actor: req.user.name,
       targetUser: request.doctor._id
+    });
+
+    // Send email to doctor
+    await sendEmail({
+      email: request.doctor.email,
+      subject: 'Access Request Rejected - HealthConnect',
+      message: `Patient ${req.user.name} has rejected your access request.`
     });
 
     res.json({

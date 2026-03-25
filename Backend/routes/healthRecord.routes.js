@@ -3,8 +3,6 @@ import {
   getHealthRecords,
   getHealthRecord,
   createHealthRecord,
-  updateHealthRecord,
-  deleteHealthRecord,
   downloadHealthRecord,
   verifyHealthRecord
 } from '../controllers/healthRecord.controller.js';
@@ -21,9 +19,7 @@ router.route('/')
   .post(authorize('patient', 'doctor'), upload.single('file'), createHealthRecord);
 
 router.route('/:id')
-  .get(getHealthRecord)
-  .put(authorize('patient'), updateHealthRecord)
-  .delete(authorize('patient'), deleteHealthRecord);
+  .get(getHealthRecord);
 
 router.get('/:id/download', downloadHealthRecord);
 router.get('/:id/verify', authorize('patient', 'doctor'), verifyHealthRecord);

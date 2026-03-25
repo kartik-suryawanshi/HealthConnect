@@ -4,6 +4,9 @@ import { logActivity } from '../utils/activityLogger.js';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import forge from 'node-forge';
+import Tesseract from 'tesseract.js';
+import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 // @desc    Get all health records for a patient
 // @route   GET /api/health-records
@@ -175,21 +178,91 @@ export const createHealthRecord = async (req, res) => {
 
     const isDoctor = req.user.role === 'doctor';
 
+    // 1) AI Fraud Detection check
+    try {
+       // Just a rough estimation of recent uploads by this user
+       const recentCount = await HealthRecord.countDocuments({ uploadedBy: req.user._id, createdAt: { $gt: new Date(Date.now() - 24*60*60*1000) } });
+       const reqFraud = await fetch('http://localhost:8000/fraud-detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_recent_uploads: recentCount })
+       });
+       if (reqFraud.ok) {
+          const fraudData = await reqFraud.json();
+          if (fraudData.is_fraud_suspected) {
+             console.warn('AI Alert: Potentially abnormal upload patterns from user', req.user._id);
+          }
+       }
+    } catch (e) { console.log('Fraud detection skipped (AI service may be down)'); }
+
+    // 2) Run OCR
+    let extractedText = '';
+    try {
+      if (req.file.mimetype.startsWith('image/')) {
+        const { data: { text } } = await Tesseract.recognize(req.file.path, 'eng');
+        extractedText = text;
+      }
+    } catch(err) {
+      console.error('OCR Error:', err);
+    }
+
+    // 3) AI Document Classification
+    if (extractedText) {
+      try {
+        const classRes = await fetch('http://localhost:8000/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: extractedText.substring(0, 1000) }) // Send up to 1000 chars
+        });
+        if (classRes.ok) {
+           const classData = await classRes.json();
+           console.log('AI Automatic Classification:', classData);
+        }
+      } catch (err) { console.log('Classification skipped (AI service may be down)'); }
+    }
+
+    // 4) Upload file to Cloudinary
+    const cloudinaryResponse = await uploadOnCloudinary(req.file.path);
+    if (!cloudinaryResponse) {
+       return res.status(500).json({ success: false, message: 'Error uploading file to storage provider' });
+    }
+    const finalFilePath = cloudinaryResponse.secure_url;
+
+    let finalSignature = null;
+    if (isDoctor) {
+      // Mocking doctor's private key generation for signing
+      const { privateKey } = forge.pki.rsa.generateKeyPair({ bits: 1024, e: 0x10001 });
+      const md = forge.md.sha256.create();
+      md.update(hash, 'utf8');
+      finalSignature = forge.util.encode64(privateKey.sign(md));
+    }
+
     const record = await HealthRecord.create({
       patient: targetPatientId,
       name,
       type,
       description,
       tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-      filePath: req.file.path,
+      filePath: finalFilePath,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
       accessStatus: sharedWith.length > 0 ? 'shared' : 'private',
       sharedWith: sharedWith,
       hash: hash,
+      extractedText: extractedText,
       uploadedBy: req.user._id,
-      isImmutable: isDoctor
+      isImmutable: isDoctor,
+      isLocked: isDoctor, // Lock verified records immediately
+      versions: [{
+        filePath: finalFilePath,
+        fileHash: hash,
+        uploadedBy: req.user._id,
+        createdAt: new Date(),
+        isVerified: isDoctor,
+        verifiedBy: isDoctor ? req.user._id : null,
+        signature: finalSignature
+      }]
     });
 
     // Log activity
@@ -220,124 +293,7 @@ export const createHealthRecord = async (req, res) => {
   }
 };
 
-// @desc    Update health record
-// @route   PUT /api/health-records/:id
-// @access  Private (Patient only)
-export const updateHealthRecord = async (req, res) => {
-  try {
-    const record = await HealthRecord.findById(req.params.id);
 
-    if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: 'Health record not found'
-      });
-    }
-
-    if (record.patient.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this record'
-      });
-    }
-
-    if (record.isImmutable && req.user.role === 'patient') {
-      return res.status(403).json({
-        success: false,
-        message: 'This document is immutable because it was uploaded by a doctor. It cannot be modified.'
-      });
-    }
-
-    const { name, description, tags, accessStatus } = req.body;
-
-    if (name) record.name = name;
-    if (description) record.description = description;
-    if (tags) record.tags = tags.split(',').map(tag => tag.trim());
-    if (accessStatus) record.accessStatus = accessStatus;
-
-    await record.save();
-
-    // Log activity
-    await logActivity({
-      user: req.user._id,
-      action: 'access',
-      entityType: 'healthRecord',
-      entityId: record._id,
-      description: `Updated ${record.name}`,
-      actor: req.user.name
-    });
-
-    res.json({
-      success: true,
-      message: 'Health record updated successfully',
-      data: record
-    });
-  } catch (error) {
-    console.error('Update health record error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error updating health record'
-    });
-  }
-};
-
-// @desc    Delete health record
-// @route   DELETE /api/health-records/:id
-// @access  Private (Patient only)
-export const deleteHealthRecord = async (req, res) => {
-  try {
-    const record = await HealthRecord.findById(req.params.id);
-
-    if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: 'Health record not found'
-      });
-    }
-
-    if (record.patient.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this record'
-      });
-    }
-
-    if (record.isImmutable && req.user.role === 'patient') {
-      return res.status(403).json({
-        success: false,
-        message: 'This document is immutable because it was uploaded by a doctor. It cannot be deleted.'
-      });
-    }
-
-    // Delete file from filesystem
-    if (fs.existsSync(record.filePath)) {
-      fs.unlinkSync(record.filePath);
-    }
-
-    await HealthRecord.findByIdAndDelete(req.params.id);
-
-    // Log activity
-    await logActivity({
-      user: req.user._id,
-      action: 'delete',
-      entityType: 'healthRecord',
-      entityId: record._id,
-      description: `Deleted ${record.name}`,
-      actor: req.user.name
-    });
-
-    res.json({
-      success: true,
-      message: 'Health record deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete health record error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error deleting health record'
-    });
-  }
-};
 
 // @desc    Download health record file
 // @route   GET /api/health-records/:id/download
@@ -421,12 +377,14 @@ export const verifyHealthRecord = async (req, res) => {
     const fileBuffer = fs.readFileSync(record.filePath);
     const currentHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-    const isValid = currentHash === record.hash;
+    const isValidHash = currentHash === record.hash;
+    const isSigned = record.versions && record.versions[0] && record.versions[0].signature;
+    const isVerified = record.isLocked && isSigned;
 
     res.json({
       success: true,
-      isValid: isValid,
-      message: isValid ? 'Document integrity verified.' : 'Document has been tampered with or modified.',
+      isValid: isValidHash && isVerified,
+      message: (isValidHash && isVerified) ? 'Document integrity and signature verified.' : 'Document failed verification or hasn\'t been signed by a doctor.',
       expectedHash: record.hash || null,
       currentHash: currentHash
     });

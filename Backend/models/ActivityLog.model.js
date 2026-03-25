@@ -37,6 +37,12 @@ const activityLogSchema = new mongoose.Schema({
     userAgent: String,
     recordType: String,
     fileName: String
+  },
+  previousHash: {
+    type: String
+  },
+  currentHash: {
+    type: String
   }
 }, {
   timestamps: true

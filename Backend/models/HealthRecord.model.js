@@ -40,6 +40,10 @@ const healthRecordSchema = new mongoose.Schema({
     type: String, // SHA-256 hash
     required: false
   },
+  extractedText: {
+    type: String, // from OCR
+    required: false
+  },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -48,6 +52,19 @@ const healthRecordSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isLocked: {
+    type: Boolean,
+    default: false
+  },
+  versions: [{
+    filePath: String,
+    fileHash: String,
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now },
+    isVerified: { type: Boolean, default: false },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    signature: String
+  }],
   accessStatus: {
     type: String,
     enum: ['private', 'shared'],
