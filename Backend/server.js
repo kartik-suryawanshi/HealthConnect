@@ -1,7 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import morgan from 'morgan';
 import path from 'path';
 import * as Sentry from '@sentry/node';
@@ -12,7 +12,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import xss from 'xss-clean';
 import mongoSanitize from 'express-mongo-sanitize';
-// import { fileURLToPath } from 'url';
 
 // Import Routes
 import authRoutes from './routes/auth.routes.js';
@@ -23,9 +22,6 @@ import userRoutes from './routes/user.routes.js';
 import insuranceRoutes from './routes/insurance.routes.js';
 import healthMetricRoutes from './routes/healthMetric.routes.js';
 import { startCronJobs } from './utils/cronJobs.js';
-
-// Load environment variables
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,23 +38,7 @@ Sentry.init({
 });
 
 // Middleware
-// Set security HTTP headers
-app.use(helmet());
-
-// Cross-site scripting (XSS) protection
-app.use(xss());
-
-// Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again in 15 minutes'
-});
-app.use('/api', limiter);
-
+// Enable CORS first so all responses get the correct headers
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -83,9 +63,29 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Set security HTTP headers
+app.use(helmet());
+
+// Parse bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Cross-site scripting (XSS) protection
+app.use(xss());
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again in 15 minutes'
+});
+app.use('/api', limiter);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -45,6 +45,11 @@ const statusConfig = {
     label: "Rejected",
     className: "badge-revoked",
   },
+  expired: {
+    icon: AlertCircle,
+    label: "Expired",
+    className: "badge-muted",
+  },
 };
 
 export default function RequestAccess() {
@@ -67,7 +72,7 @@ export default function RequestAccess() {
       setLoading(true);
       const response = await api.getAccessRequests();
       if (response.success && response.data) {
-        setRequests(response.data);
+        setRequests(response.data as AccessRequest[]);
       }
     } catch (error: any) {
       toast({
@@ -237,7 +242,11 @@ export default function RequestAccess() {
               </div>
             ) : (
               requests.map((request, index) => {
-                const status = statusConfig[request.status];
+                const status = statusConfig[request.status] || {
+                  icon: AlertCircle,
+                  label: request.status.charAt(0).toUpperCase() + request.status.slice(1),
+                  className: "badge-muted"
+                };
                 const StatusIcon = status.icon;
                 return (
                   <div

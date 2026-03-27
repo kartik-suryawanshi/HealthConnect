@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import forge from 'node-forge';
 import Tesseract from 'tesseract.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
+import { Readable } from 'stream';
 
 // @desc    Get all health records for a patient
 // @route   GET /api/health-records
@@ -223,10 +224,13 @@ export const createHealthRecord = async (req, res) => {
 
     // 4) Upload file to Cloudinary
     const cloudinaryResponse = await uploadOnCloudinary(req.file.path);
-    if (!cloudinaryResponse) {
-       return res.status(500).json({ success: false, message: 'Error uploading file to storage provider' });
-    }
     const finalFilePath = cloudinaryResponse.secure_url;
+    if (!finalFilePath) {
+      return res.status(502).json({
+        success: false,
+        message: 'Upload succeeded but no file URL was returned by storage provider'
+      });
+    }
 
     let finalSignature = null;
     if (isDoctor) {
@@ -322,7 +326,11 @@ export const downloadHealthRecord = async (req, res) => {
       });
     }
 
-    if (!fs.existsSync(record.filePath)) {
+    const isRemoteUrl =
+      typeof record.filePath === 'string' &&
+      (record.filePath.startsWith('http://') || record.filePath.startsWith('https://'));
+
+    if (!isRemoteUrl && !fs.existsSync(record.filePath)) {
       return res.status(404).json({
         success: false,
         message: 'File not found'
@@ -343,7 +351,26 @@ export const downloadHealthRecord = async (req, res) => {
       }
     });
 
-    res.download(record.filePath, record.fileName);
+    if (!isRemoteUrl) {
+      return res.download(record.filePath, record.fileName);
+    }
+
+    const upstream = await fetch(record.filePath);
+    if (!upstream.ok || !upstream.body) {
+      return res.status(502).json({
+        success: false,
+        message: `Unable to download remote file (status ${upstream.status})`
+      });
+    }
+
+    const contentType = upstream.headers.get('content-type');
+    const contentLength = upstream.headers.get('content-length');
+
+    res.setHeader('Content-Disposition', `attachment; filename="${record.fileName}"`);
+    if (contentType) res.setHeader('Content-Type', contentType);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+
+    Readable.fromWeb(upstream.body).pipe(res);
   } catch (error) {
     console.error('Download health record error:', error);
     res.status(500).json({
@@ -367,15 +394,34 @@ export const verifyHealthRecord = async (req, res) => {
       });
     }
 
-    if (!fs.existsSync(record.filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'File not found on server'
-      });
-    }
+    const isRemoteUrl =
+      typeof record.filePath === 'string' &&
+      (record.filePath.startsWith('http://') || record.filePath.startsWith('https://'));
 
-    const fileBuffer = fs.readFileSync(record.filePath);
-    const currentHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    let currentHash;
+    if (!isRemoteUrl) {
+      if (!fs.existsSync(record.filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'File not found on server'
+        });
+      }
+      const fileBuffer = fs.readFileSync(record.filePath);
+      currentHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    } else {
+      const upstream = await fetch(record.filePath);
+      if (!upstream.ok || !upstream.body) {
+        return res.status(502).json({
+          success: false,
+          message: `Unable to verify remote file (status ${upstream.status})`
+        });
+      }
+      const hasher = crypto.createHash('sha256');
+      for await (const chunk of Readable.fromWeb(upstream.body)) {
+        hasher.update(chunk);
+      }
+      currentHash = hasher.digest('hex');
+    }
 
     const isValidHash = currentHash === record.hash;
     const isSigned = record.versions && record.versions[0] && record.versions[0].signature;
